@@ -5,17 +5,17 @@ It is built with NestJS and will provide REST API and WebSocket functionality fo
 
 ## Features
 
-* Track different types of activities for each property
-* Real-time updates for connected users
-* Replay of missed activities when a user reconnects
-* Weighted scoring system with notifications
+- Track different types of activities for each property
+- Real-time updates for connected users
+- Replay of missed activities when a user reconnects
+- Weighted scoring system with notifications
 
 ## Tech Stack
 
-* NestJS
-* PostgreSQL
-* WebSockets (Socket.IO)
-* Swagger for API documentation
+- NestJS
+- PostgreSQL
+- WebSockets (Socket.IO)
+- Swagger for API documentation
 
 ## Installation
 
@@ -26,6 +26,30 @@ cd PropertyActivityTracker
 
 # Install dependencies
 npm install
+```
+
+## Database Setup (Prisma)
+
+This project uses **Prisma** as the ORM. Before running the project, configure your database connection.
+
+1. **Set your database URL** in a `.env` file:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/your_database?schema=public"
+```
+
+Replace `USER`, `PASSWORD`, and `your_database` with your PostgreSQL credentials.
+
+2. **Run Prisma migrations** to set up the database schema:
+
+```bash
+npx prisma migrate dev --name init
+```
+
+3. **Generate Prisma Client**:
+
+```bash
+npx prisma generate
 ```
 
 ## Running the Project
