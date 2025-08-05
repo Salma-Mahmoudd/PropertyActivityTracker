@@ -5,15 +5,18 @@ It is built with NestJS and will provide REST API and WebSocket functionality fo
 
 ## Features
 
+- JWT Authentication & Role-based access control
 - Track different types of activities for each property
 - Real-time updates for connected users
 - Replay of missed activities when a user reconnects
 - Weighted scoring system with notifications
+- Swagger API documentation
 
 ## Tech Stack
 
 - NestJS
 - PostgreSQL
+- Prisma ORM
 - WebSockets (Socket.IO)
 - Swagger for API documentation
 
@@ -50,6 +53,12 @@ npx prisma migrate dev --name init
 
 ```bash
 npx prisma generate
+```
+
+4. **Seed the database with sample data**:
+
+```bash
+npx prisma db seed
 ```
 
 ## Running the Project

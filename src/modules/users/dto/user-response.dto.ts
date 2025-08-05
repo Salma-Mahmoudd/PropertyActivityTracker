@@ -32,4 +32,7 @@ export class UserResponseDto {
 
   @ApiProperty({ type: Date })
   createdAt: Date;
+
+  @ApiProperty({ type: Date })
+  updatedAt: Date;
 }

@@ -3,14 +3,6 @@ import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateUserActivityDto {
   @ApiProperty({
-    example: 1,
-    description: 'ID of the user performing the activity',
-  })
-  @IsInt()
-  @Min(1)
-  userId: number;
-
-  @ApiProperty({
     example: 2,
     description: 'ID of the property related to the activity',
   })

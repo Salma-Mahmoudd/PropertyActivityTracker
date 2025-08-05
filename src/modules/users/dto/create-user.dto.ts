@@ -5,7 +5,12 @@ import {
   MinLength,
   MaxLength,
   IsString,
+  IsOptional,
 } from 'class-validator';
+import {
+  UserRoleEnum,
+  AccountStatusEnum,
+} from '../../../common/enums/user.enum';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'John Doe', maxLength: 50 })
@@ -22,4 +27,28 @@ export class CreateUserDto {
   @IsString()
   @MinLength(8)
   password: string;
+
+  @ApiProperty({
+    example: 'USER',
+    enum: UserRoleEnum,
+    default: UserRoleEnum.SALES_REP,
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  role?: UserRoleEnum;
+
+  @ApiProperty({
+    example: 'ACTIVE',
+    enum: AccountStatusEnum,
+    default: AccountStatusEnum.ACTIVE,
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  accountStatus?: AccountStatusEnum;
+
+  @ApiProperty({ example: '20', default: 0, required: false })
+  @IsOptional()
+  score?: number;
 }
