@@ -6,6 +6,7 @@ import { PrismaModule } from './database/prisma/prisma.module';
 import { UserActivitiesModule } from './modules/user-activities/user-activities.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ActivitiesModule } from './modules/activities/activities.module';
     PropertiesModule,
     ActivitiesModule,
     UserActivitiesModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

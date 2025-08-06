@@ -13,6 +13,7 @@ import { plainToInstance } from 'class-transformer';
 import { UserResponseDto } from './dto/user-response.dto';
 import { PublicUserResponseDto } from './dto/public-user-response.dto';
 import * as bcrypt from 'bcrypt';
+import { UserStatusEnum } from 'src/common/enums/user.enum';
 
 @Injectable()
 export class UsersService {
@@ -131,6 +132,13 @@ export class UsersService {
       data: { accountStatus: status },
     });
     return plainToInstance(UserResponseDto, updatedUser);
+  }
+
+  async setStatus(id: number, status: UserStatusEnum) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { status },
+    });
   }
 
   async updateProfile(

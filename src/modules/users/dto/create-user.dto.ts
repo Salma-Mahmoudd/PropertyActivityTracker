@@ -10,6 +10,7 @@ import {
 import {
   UserRoleEnum,
   AccountStatusEnum,
+  UserStatusEnum,
 } from '../../../common/enums/user.enum';
 
 export class CreateUserDto {
@@ -51,4 +52,10 @@ export class CreateUserDto {
   @ApiProperty({ example: '20', default: 0, required: false })
   @IsOptional()
   score?: number;
+
+  @IsOptional()
+  lastSeen?: Date;
+
+  @IsOptional()
+  status?: UserStatusEnum;
 }

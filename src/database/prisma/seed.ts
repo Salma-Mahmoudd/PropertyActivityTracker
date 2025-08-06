@@ -9,11 +9,11 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Starting seed...');
 
-  await prisma.userActivity.deleteMany();
-  await prisma.activity.deleteMany();
-  await prisma.property.deleteMany();
-  await prisma.user.deleteMany();
-  console.log('Cleared existing data');
+  // await prisma.userActivity.deleteMany();
+  // await prisma.activity.deleteMany();
+  // await prisma.property.deleteMany();
+  // await prisma.user.deleteMany();
+  // console.log('Cleared existing data');
 
   // Create Users
   const passwordHash = await bcrypt.hash('password123', 10);
