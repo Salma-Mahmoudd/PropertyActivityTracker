@@ -44,10 +44,6 @@ export class ActivitiesGateway
     private readonly prismaService: PrismaService,
   ) {}
 
-  /**
-   * Handle WebSocket connection
-   * @param client - Authenticated socket client
-   */
   async handleConnection(client: AuthenticatedSocket): Promise<void> {
     try {
       const authToken = this.extractAuthToken(client);
@@ -68,7 +64,6 @@ export class ActivitiesGateway
 
       this.broadcastUserStatusChange(client.userId, 'ONLINE', client.userEmail);
 
-      // Send replay for missed activities
       await this.handleReplayForUser(client.userId);
     } catch (error) {
       this.logger.error('Authentication failed:', error);
@@ -76,10 +71,6 @@ export class ActivitiesGateway
     }
   }
 
-  /**
-   * Handle WebSocket disconnection
-   * @param client - Authenticated socket client
-   */
   async handleDisconnect(client: AuthenticatedSocket): Promise<void> {
     if (!client.userId) return;
 
@@ -90,10 +81,6 @@ export class ActivitiesGateway
     this.broadcastUserStatusChange(client.userId, 'OFFLINE', client.userEmail);
   }
 
-  /**
-   * Broadcast activity to all connected clients
-   * @param activityData - Activity data to broadcast
-   */
   broadcastActivity(activityData: Record<string, unknown>): void {
     this.server.emit(WEBSOCKET_EVENTS.LIVE_ACTIVITY, {
       ...activityData,
@@ -101,12 +88,6 @@ export class ActivitiesGateway
     });
   }
 
-  /**
-   * Send notification to all connected clients
-   * @param message - Notification message
-   * @param data - Additional notification data
-   * @param type - Notification type (success, error, info, warning)
-   */
   sendNotification(
     message: string,
     data?: unknown,
@@ -120,11 +101,6 @@ export class ActivitiesGateway
     });
   }
 
-  /**
-   * Send replay of missed activities to a specific user
-   * @param userId - User ID to send replay to
-   * @param lastSeenAt - Timestamp of last seen activity
-   */
   async sendReplayForUser(userId: number, lastSeenAt: Date): Promise<void> {
     const socketId = this.connectedUsers.get(userId);
     if (!socketId) {
@@ -156,10 +132,6 @@ export class ActivitiesGateway
     }
   }
 
-  /**
-   * Handle get online users request
-   * @param client - Authenticated socket client
-   */
   @SubscribeMessage('get-online-users')
   async handleGetOnlineUsers(
     @ConnectedSocket() client: AuthenticatedSocket,
@@ -184,18 +156,9 @@ export class ActivitiesGateway
       });
     } catch (error) {
       this.logger.error('Error fetching online users:', error);
-      client.emit(WEBSOCKET_EVENTS.NOTIFICATION, {
-        message: 'Failed to fetch online users',
-        type: 'error',
-        timestamp: new Date(),
-      });
     }
   }
 
-  /**
-   * Handle ping request
-   * @param client - Authenticated socket client
-   */
   @SubscribeMessage('ping')
   handlePing(@ConnectedSocket() client: AuthenticatedSocket): void {
     client.emit(WEBSOCKET_EVENTS.PONG, {
@@ -204,11 +167,6 @@ export class ActivitiesGateway
     });
   }
 
-  /**
-   * Extract authentication token from client
-   * @param client - Authenticated socket client
-   * @returns Authentication token or null
-   */
   private extractAuthToken(client: AuthenticatedSocket): string | null {
     const handshake = client.handshake as HandshakeData;
 
@@ -223,11 +181,6 @@ export class ActivitiesGateway
     return null;
   }
 
-  /**
-   * Update user status in database
-   * @param userId - User ID
-   * @param status - New user status
-   */
   private async updateUserStatus(
     userId: number,
     status: UserStatus,
@@ -236,17 +189,11 @@ export class ActivitiesGateway
       where: { id: userId },
       data: {
         status,
-        lastSeen: status === UserStatus.OFFLINE ? new Date() : null,
+        lastSeen: status === UserStatus.OFFLINE ? new Date() : undefined,
       },
     });
   }
 
-  /**
-   * Broadcast user status change to all clients
-   * @param userId - User ID
-   * @param status - New status
-   * @param userEmail - User email
-   */
   private broadcastUserStatusChange(
     userId: number,
     status: string,
@@ -260,10 +207,6 @@ export class ActivitiesGateway
     });
   }
 
-  /**
-   * Handle replay for user's missed activities
-   * @param userId - User ID to send replay to
-   */
   private async handleReplayForUser(userId: number): Promise<void> {
     try {
       const foundUser = await this.prismaService.user.findUnique({
@@ -271,22 +214,21 @@ export class ActivitiesGateway
         select: { lastSeen: true },
       });
 
+      let lastSeenAt: Date;
       if (foundUser?.lastSeen) {
-        // Use setTimeout to avoid blocking the connection
-        setTimeout(() => {
-          void this.sendReplayForUser(userId, foundUser.lastSeen);
-        }, ACTIVITY_CONSTANTS.REPLAY_DELAY_MS);
+        lastSeenAt = foundUser.lastSeen;
+      } else {
+        lastSeenAt = new Date(Date.now() - 60 * 60 * 1000);
       }
+
+      setTimeout(() => {
+        void this.sendReplayForUser(userId, lastSeenAt);
+      }, ACTIVITY_CONSTANTS.REPLAY_DELAY_MS);
     } catch (error) {
       this.logger.error(`Failed to handle replay for user ${userId}:`, error);
     }
   }
 
-  /**
-   * Get missed activities since last seen
-   * @param lastSeenAt - Timestamp of last seen activity
-   * @returns Array of missed activities
-   */
   private async getMissedActivities(
     lastSeenAt: Date,
   ): Promise<ReplayActivityData[]> {
@@ -321,11 +263,6 @@ export class ActivitiesGateway
     });
   }
 
-  /**
-   * Send replay activities to a specific socket
-   * @param socketId - Socket ID to send to
-   * @param activities - Activities to replay
-   */
   private async sendReplayActivities(
     socketId: string,
     activities: ReplayActivityData[],
@@ -345,6 +282,7 @@ export class ActivitiesGateway
             replayIndex: activityIndex + 1,
             totalActivities: activities.length,
             replaySpeed: ACTIVITY_CONSTANTS.REPLAY_SPEED_MULTIPLIER,
+            isReplayed: true,
           });
 
           if (activityIndex === activities.length - 1) {
