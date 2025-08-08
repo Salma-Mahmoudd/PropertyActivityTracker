@@ -4,7 +4,7 @@
 /build
 node_modules
 src/database/prisma/migrations
-src/modules/dashboard
+
 comprehensive-test.js
 
 # Logs
