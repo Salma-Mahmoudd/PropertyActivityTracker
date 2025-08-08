@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
@@ -15,7 +16,15 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
-import { ApiTags, ApiOkResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOkResponse,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+} from '@nestjs/swagger';
 import { ActivityResponseDto } from './dto/activity-response.dto';
 
 @ApiTags('Activities')
@@ -27,34 +36,70 @@ export class ActivitiesController {
 
   @Roles(UserRole.ADMIN)
   @Post()
-  @ApiOkResponse({ type: ActivityResponseDto })
-  create(@Body() dto: CreateActivityDto) {
-    return this.activitiesService.create(dto);
+  @ApiOperation({ summary: 'Create a new activity type' })
+  @ApiCreatedResponse({
+    type: ActivityResponseDto,
+    description: 'Activity created successfully',
+  })
+  async createActivity(
+    @Body() createActivityDto: CreateActivityDto,
+  ): Promise<ActivityResponseDto> {
+    return this.activitiesService.createActivity(createActivityDto);
   }
 
   @Get()
-  @ApiOkResponse({ type: ActivityResponseDto, isArray: true })
-  findAll() {
-    return this.activitiesService.findAll();
+  @ApiOperation({ summary: 'Get all activity types' })
+  @ApiOkResponse({
+    type: ActivityResponseDto,
+    isArray: true,
+    description: 'List of all activity types',
+  })
+  async getAllActivities(): Promise<ActivityResponseDto[]> {
+    return this.activitiesService.getAllActivities();
   }
 
   @Get(':id')
-  @ApiOkResponse({ type: ActivityResponseDto })
-  findOne(@Param('id') id: string) {
-    return this.activitiesService.findOne(+id);
+  @ApiOperation({ summary: 'Get activity by ID' })
+  @ApiParam({ name: 'id', description: 'Activity ID', type: 'number' })
+  @ApiOkResponse({
+    type: ActivityResponseDto,
+    description: 'Activity found successfully',
+  })
+  @ApiNotFoundResponse({ description: 'Activity not found' })
+  async getActivityById(
+    @Param('id', ParseIntPipe) activityId: number,
+  ): Promise<ActivityResponseDto> {
+    return this.activitiesService.getActivityById(activityId);
   }
 
   @Roles(UserRole.ADMIN)
   @Patch(':id')
-  @ApiOkResponse({ type: ActivityResponseDto })
-  update(@Param('id') id: string, @Body() dto: UpdateActivityDto) {
-    return this.activitiesService.update(+id, dto);
+  @ApiOperation({ summary: 'Update activity by ID' })
+  @ApiParam({ name: 'id', description: 'Activity ID', type: 'number' })
+  @ApiOkResponse({
+    type: ActivityResponseDto,
+    description: 'Activity updated successfully',
+  })
+  @ApiNotFoundResponse({ description: 'Activity not found' })
+  async updateActivity(
+    @Param('id', ParseIntPipe) activityId: number,
+    @Body() updateActivityDto: UpdateActivityDto,
+  ): Promise<ActivityResponseDto> {
+    return this.activitiesService.updateActivity(activityId, updateActivityDto);
   }
 
   @Roles(UserRole.ADMIN)
   @Delete(':id')
-  @ApiOkResponse({ type: ActivityResponseDto })
-  remove(@Param('id') id: string) {
-    return this.activitiesService.remove(+id);
+  @ApiOperation({ summary: 'Delete activity by ID' })
+  @ApiParam({ name: 'id', description: 'Activity ID', type: 'number' })
+  @ApiOkResponse({
+    type: ActivityResponseDto,
+    description: 'Activity deleted successfully',
+  })
+  @ApiNotFoundResponse({ description: 'Activity not found' })
+  async deleteActivity(
+    @Param('id', ParseIntPipe) activityId: number,
+  ): Promise<ActivityResponseDto> {
+    return this.activitiesService.deleteActivity(activityId);
   }
 }

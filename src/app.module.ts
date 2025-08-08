@@ -7,6 +7,7 @@ import { UserActivitiesModule } from './modules/user-activities/user-activities.
 import { PropertiesModule } from './modules/properties/properties.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -21,5 +22,6 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     UserActivitiesModule,
     DashboardModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}

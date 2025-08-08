@@ -9,11 +9,12 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Starting seed...');
 
-  // await prisma.userActivity.deleteMany();
-  // await prisma.activity.deleteMany();
-  // await prisma.property.deleteMany();
-  // await prisma.user.deleteMany();
-  // console.log('Cleared existing data');
+  // Clear existing data
+  await prisma.userActivity.deleteMany();
+  await prisma.activity.deleteMany();
+  await prisma.property.deleteMany();
+  await prisma.user.deleteMany();
+  console.log('Cleared existing data');
 
   // Create Users
   const passwordHash = await bcrypt.hash('password123', 10);
@@ -178,7 +179,7 @@ async function main() {
   const userScores: Record<number, number> = {};
 
   for (const rep of salesReps) {
-    userScores[rep.id] = 0; // Initialize score
+    userScores[rep.id] = 0;
     for (let i = 0; i < 20; i++) {
       const randomActivity =
         allActivities[Math.floor(Math.random() * allActivities.length)];
@@ -190,6 +191,8 @@ async function main() {
         propertyId: randomProperty.id,
         activityId: randomActivity.id,
         note: `${randomActivity.name} for property ${randomProperty.name || randomProperty.address}`,
+        latitude: randomProperty.latitude + (Math.random() - 0.5) * 0.001,
+        longitude: randomProperty.longitude + (Math.random() - 0.5) * 0.001,
       });
 
       userScores[rep.id] += randomActivity.weight;

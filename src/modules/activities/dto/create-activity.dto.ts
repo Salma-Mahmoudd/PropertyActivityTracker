@@ -9,33 +9,46 @@ import {
 } from 'class-validator';
 
 export class CreateActivityDto {
-  @ApiProperty({ example: 'Visit', description: 'Name of the activity' })
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(100)
-  name: string;
-
-  @ApiProperty({ example: 10, description: 'Weight score for the activity' })
-  @IsInt()
-  @Min(1)
-  weight: number;
+  @ApiProperty({
+    example: 'visit',
+    description:
+      'Unique name of the activity type (e.g., visit, call, inspection, follow-up, note)',
+    maxLength: 100,
+  })
+  @IsNotEmpty({ message: 'Activity name is required' })
+  @IsString({ message: 'Activity name must be a string' })
+  @MaxLength(100, { message: 'Activity name cannot exceed 100 characters' })
+  readonly name: string;
 
   @ApiProperty({
-    example: 'visit-icon.png',
-    required: false,
-    description: 'Optional icon filename or URL',
+    example: 10,
+    description:
+      'Weight score for the activity (1-100) - higher weight means more points',
+    minimum: 1,
+    maximum: 100,
   })
-  @IsOptional()
-  @IsString()
-  icon?: string;
+  @IsInt({ message: 'Weight must be an integer' })
+  @Min(1, { message: 'Weight must be at least 1' })
+  readonly weight: number;
 
   @ApiProperty({
-    example: 'Sales rep visited the property',
+    example: 'https://example.com/icons/visit.png',
     required: false,
-    description: 'Detailed description of the activity',
+    description: 'URL or path to the activity icon (optional)',
   })
   @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  description?: string;
+  @IsString({ message: 'Icon must be a string' })
+  readonly icon?: string;
+
+  @ApiProperty({
+    example: 'Sales representative visited the property in person',
+    required: false,
+    description:
+      'Detailed description of what this activity involves (optional)',
+    maxLength: 255,
+  })
+  @IsOptional()
+  @IsString({ message: 'Description must be a string' })
+  @MaxLength(255, { message: 'Description cannot exceed 255 characters' })
+  readonly description?: string;
 }

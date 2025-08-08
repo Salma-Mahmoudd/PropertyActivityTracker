@@ -7,55 +7,77 @@ import {
   IsString,
   IsOptional,
 } from 'class-validator';
-import {
-  UserRoleEnum,
-  AccountStatusEnum,
-  UserStatusEnum,
-} from '../../../common/enums/user.enum';
+import { UserRole, AccountStatus, UserStatus } from '@prisma/client';
 
 export class CreateUserDto {
-  @ApiProperty({ example: 'John Doe', maxLength: 50 })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50)
-  name: string;
-
-  @ApiProperty({ example: 'john@example.com' })
-  @IsEmail()
-  email: string;
-
-  @ApiProperty({ example: 'StrongPass123', minLength: 8 })
-  @IsString()
-  @MinLength(8)
-  password: string;
+  @ApiProperty({
+    example: 'John Doe',
+    description: 'Full name of the user (max 50 characters)',
+    maxLength: 50,
+  })
+  @IsString({ message: 'Name must be a string' })
+  @IsNotEmpty({ message: 'Name is required' })
+  @MaxLength(50, { message: 'Name cannot exceed 50 characters' })
+  readonly name: string;
 
   @ApiProperty({
-    example: 'USER',
-    enum: UserRoleEnum,
-    default: UserRoleEnum.SALES_REP,
-    required: false,
+    example: 'john@example.com',
+    description: 'Email address of the user',
   })
-  @IsString()
+  @IsEmail({}, { message: 'Please provide a valid email address' })
+  readonly email: string;
+
+  @ApiProperty({
+    example: 'StrongPass123',
+    description: 'Password (min 8 characters)',
+    minLength: 8,
+  })
+  @IsString({ message: 'Password must be a string' })
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  readonly password: string;
+
+  @ApiProperty({
+    example: 'SALES_REP',
+    enum: UserRole,
+    default: UserRole.SALES_REP,
+    required: false,
+    description: 'User role in the system',
+  })
+  @IsString({ message: 'Role must be a string' })
   @IsOptional()
-  role?: UserRoleEnum;
+  readonly role?: UserRole;
 
   @ApiProperty({
     example: 'ACTIVE',
-    enum: AccountStatusEnum,
-    default: AccountStatusEnum.ACTIVE,
+    enum: AccountStatus,
+    default: AccountStatus.ACTIVE,
     required: false,
+    description: 'Account status of the user',
   })
-  @IsString()
+  @IsString({ message: 'Account status must be a string' })
   @IsOptional()
-  accountStatus?: AccountStatusEnum;
+  readonly accountStatus?: AccountStatus;
 
-  @ApiProperty({ example: '20', default: 0, required: false })
+  @ApiProperty({
+    example: 0,
+    default: 0,
+    required: false,
+    description: 'User score (default: 0)',
+  })
   @IsOptional()
-  score?: number;
+  readonly score?: number;
 
+  @ApiProperty({
+    required: false,
+    description: 'Last seen timestamp',
+  })
   @IsOptional()
-  lastSeen?: Date;
+  readonly lastSeen?: Date;
 
+  @ApiProperty({
+    required: false,
+    description: 'User status',
+  })
   @IsOptional()
-  status?: UserStatusEnum;
+  readonly status?: UserStatus;
 }

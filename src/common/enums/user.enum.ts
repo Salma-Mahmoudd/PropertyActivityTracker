@@ -12,4 +12,5 @@ export enum AccountStatusEnum {
 export enum UserRoleEnum {
   SALES_REP = 'SALES_REP',
   ADMIN = 'ADMIN',
+  MANAGER = 'MANAGER',
 }

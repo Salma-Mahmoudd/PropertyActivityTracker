@@ -8,37 +8,75 @@ import { PrismaService } from '../../database/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { AccountStatus, UserRole } from '@prisma/client';
+import { AccountStatus, UserRole, UserStatus, Prisma } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { UserResponseDto } from './dto/user-response.dto';
 import { PublicUserResponseDto } from './dto/public-user-response.dto';
 import * as bcrypt from 'bcrypt';
-import { UserStatusEnum } from 'src/common/enums/user.enum';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
-  async create(data: CreateUserDto): Promise<UserResponseDto> {
-    const existing = await this.prisma.user.findFirst({
+  /**
+   * Generate avatar URL for user
+   * @param userName - User name to generate avatar for
+   * @returns Avatar URL
+   */
+  private generateAvatarUrl(userName: string): string {
+    const encodedName = encodeURIComponent(userName);
+    return `https://ui-avatars.com/api/?name=${encodedName}&background=random&color=fff&size=200`;
+  }
+
+  /**
+   * Create a new user
+   * @param createUserData - User data to create
+   * @returns Created user
+   * @throws ConflictException if email already exists
+   */
+  async createUser(createUserData: CreateUserDto): Promise<UserResponseDto> {
+    const existingUser = await this.prismaService.user.findFirst({
       where: {
-        email: data.email,
+        email: createUserData.email,
         accountStatus: { not: AccountStatus.DELETED },
       },
     });
-    if (existing) throw new ConflictException('Email already in use');
-    data.password = await bcrypt.hash(data.password, 10);
-    const user = await this.prisma.user.create({ data });
-    return plainToInstance(UserResponseDto, user);
+
+    if (existingUser) {
+      throw new ConflictException('Email already in use');
+    }
+
+    const hashedPassword = await bcrypt.hash(createUserData.password, 10);
+    const avatarUrl = this.generateAvatarUrl(createUserData.name);
+
+    const newUser = await this.prismaService.user.create({
+      data: {
+        ...createUserData,
+        password: hashedPassword,
+        avatarUrl,
+      },
+    });
+
+    return plainToInstance(UserResponseDto, newUser);
   }
 
-  async findAll(): Promise<UserResponseDto[]> {
-    const users = await this.prisma.user.findMany();
-    return plainToInstance(UserResponseDto, users);
+  /**
+   * Get all users
+   * @returns Array of all users
+   */
+  async getAllUsers(): Promise<UserResponseDto[]> {
+    const allUsers = await this.prismaService.user.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return plainToInstance(UserResponseDto, allUsers);
   }
 
-  async findAllPublic(): Promise<PublicUserResponseDto[]> {
-    const users = await this.prisma.user.findMany({
+  /**
+   * Get public users (active, non-admin)
+   * @returns Array of public users
+   */
+  async getPublicUsers(): Promise<PublicUserResponseDto[]> {
+    const publicUsers = await this.prismaService.user.findMany({
       where: {
         accountStatus: AccountStatus.ACTIVE,
         role: { not: UserRole.ADMIN },
@@ -50,30 +88,58 @@ export class UsersService {
         status: true,
         lastSeen: true,
         score: true,
+        avatarUrl: true,
       },
+      orderBy: { createdAt: 'desc' },
     });
-    return plainToInstance(PublicUserResponseDto, users);
+    return plainToInstance(PublicUserResponseDto, publicUsers);
   }
 
-  async findByEmail(email: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user)
-      throw new NotFoundException(`User with email ${email} not found`);
-    return user;
-  }
-  async findOne(id: number): Promise<UserResponseDto> {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
-    return plainToInstance(UserResponseDto, user);
+  /**
+   * Find user by email
+   * @param emailAddress - Email address to search for
+   * @returns User with email
+   * @throws NotFoundException if user not found
+   */
+  async findUserByEmail(emailAddress: string) {
+    const foundUser = await this.prismaService.user.findUnique({
+      where: { email: emailAddress },
+    });
+
+    if (!foundUser) {
+      throw new NotFoundException(`User with email ${emailAddress} not found`);
+    }
+
+    return foundUser;
   }
 
-  async findSafeById(id: number): Promise<PublicUserResponseDto> {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        id,
-        // accountStatus: AccountStatus.ACTIVE,
-        // role: { not: UserRole.ADMIN },
-      },
+  /**
+   * Find user by ID
+   * @param userId - User ID to find
+   * @returns User details
+   * @throws NotFoundException if user not found
+   */
+  async findUserById(userId: number): Promise<UserResponseDto> {
+    const foundUser = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!foundUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    return plainToInstance(UserResponseDto, foundUser);
+  }
+
+  /**
+   * Find public user by ID
+   * @param userId - User ID to find
+   * @returns Public user details
+   * @throws NotFoundException if user not found
+   */
+  async findPublicUserById(userId: number): Promise<PublicUserResponseDto> {
+    const foundUser = await this.prismaService.user.findUnique({
+      where: { id: userId },
       select: {
         id: true,
         name: true,
@@ -81,82 +147,176 @@ export class UsersService {
         status: true,
         lastSeen: true,
         score: true,
+        avatarUrl: true,
       },
     });
-    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
-    return plainToInstance(PublicUserResponseDto, user);
+
+    if (!foundUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    return plainToInstance(PublicUserResponseDto, foundUser);
   }
 
-  async update(id: number, data: UpdateUserDto): Promise<UserResponseDto> {
-    const user = await this.prisma.user.findUnique({
-      where: { id, role: { not: UserRole.ADMIN } },
+  /**
+   * Update user
+   * @param userId - User ID to update
+   * @param updateData - Updated user data
+   * @returns Updated user
+   * @throws NotFoundException if user not found
+   * @throws ConflictException if email already exists
+   */
+  async updateUser(
+    userId: number,
+    updateData: UpdateUserDto,
+  ): Promise<UserResponseDto> {
+    const existingUser = await this.prismaService.user.findUnique({
+      where: { id: userId },
     });
-    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
-    if (data.email) {
-      const existingUser = await this.findByEmail(data.email);
-      if (existingUser && existingUser.id !== id)
+
+    if (!existingUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (updateData.email) {
+      const userWithSameEmail = await this.findUserByEmail(updateData.email);
+      if (userWithSameEmail && userWithSameEmail.id !== userId) {
         throw new ConflictException('Email already in use');
+      }
     }
-    if (data.password) {
-      data.password = await bcrypt.hash(data.password, 10);
+
+    const updatePayload: Prisma.UserUpdateInput = { ...updateData };
+
+    if (updateData.password) {
+      updatePayload.password = await bcrypt.hash(updateData.password, 10);
     }
-    const updatedUser = await this.prisma.user.update({ where: { id }, data });
+
+    if (updateData.name && updateData.name !== existingUser.name) {
+      updatePayload.avatarUrl = this.generateAvatarUrl(updateData.name);
+    }
+
+    const updatedUser = await this.prismaService.user.update({
+      where: { id: userId },
+      data: updatePayload,
+    });
+
     return plainToInstance(UserResponseDto, updatedUser);
   }
 
-  async softDelete(id: number): Promise<UserResponseDto> {
-    const user = await this.prisma.user.findUnique({
-      where: { id, role: { not: UserRole.ADMIN } },
+  /**
+   * Soft delete user
+   * @param userId - User ID to delete
+   * @returns Deleted user
+   * @throws NotFoundException if user not found
+   */
+  async softDeleteUser(userId: number): Promise<UserResponseDto> {
+    const existingUser = await this.prismaService.user.findUnique({
+      where: { id: userId },
     });
-    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
-    const deletedUser = await this.prisma.user.update({
-      where: { id },
+
+    if (!existingUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const deletedUser = await this.prismaService.user.update({
+      where: { id: userId },
       data: { accountStatus: AccountStatus.DELETED },
     });
+
     return plainToInstance(UserResponseDto, deletedUser);
   }
 
-  async setAccountStatus(
-    id: number,
-    status: AccountStatus,
+  /**
+   * Update account status
+   * @param userId - User ID to update
+   * @param newStatus - New account status
+   * @returns Updated user
+   * @throws NotFoundException if user not found
+   * @throws BadRequestException if trying to set DELETED status
+   */
+  async updateAccountStatus(
+    userId: number,
+    newStatus: AccountStatus,
   ): Promise<UserResponseDto> {
-    if (!['ACTIVE', 'INACTIVE'].includes(status)) {
-      throw new BadRequestException('Invalid status');
+    if (newStatus === AccountStatus.DELETED) {
+      throw new BadRequestException(
+        'Cannot set status to DELETED. Use softDelete instead.',
+      );
     }
-    const user = await this.prisma.user.findUnique({
-      where: { id, role: { not: UserRole.ADMIN } },
+
+    const existingUser = await this.prismaService.user.findUnique({
+      where: { id: userId },
     });
-    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
-    const updatedUser = await this.prisma.user.update({
-      where: { id },
-      data: { accountStatus: status },
+
+    if (!existingUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const updatedUser = await this.prismaService.user.update({
+      where: { id: userId },
+      data: { accountStatus: newStatus },
     });
+
     return plainToInstance(UserResponseDto, updatedUser);
   }
 
-  async setStatus(id: number, status: UserStatusEnum) {
-    return this.prisma.user.update({
-      where: { id },
-      data: { status },
+  /**
+   * Update user status
+   * @param userId - User ID to update
+   * @param newStatus - New user status
+   * @returns Updated user
+   */
+  async updateUserStatus(userId: number, newStatus: UserStatus) {
+    return this.prismaService.user.update({
+      where: { id: userId },
+      data: { status: newStatus },
     });
   }
 
-  async updateProfile(
-    id: number,
-    dto: UpdateProfileDto,
+  /**
+   * Update user profile
+   * @param userId - User ID to update
+   * @param profileData - Profile data to update
+   * @returns Updated public user
+   * @throws NotFoundException if user not found
+   * @throws ConflictException if email already exists
+   */
+  async updateUserProfile(
+    userId: number,
+    profileData: UpdateProfileDto,
   ): Promise<PublicUserResponseDto> {
-    const data: Partial<UpdateProfileDto> = {};
-    if (dto.name) data.name = dto.name;
-    if (dto.email) {
-      const existingUser = await this.findByEmail(dto.email);
-      if (existingUser && existingUser.id !== id)
+    const existingUser = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existingUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const updatePayload: Prisma.UserUpdateInput = {};
+
+    if (profileData.name) {
+      updatePayload.name = profileData.name;
+      updatePayload.avatarUrl = this.generateAvatarUrl(profileData.name);
+    }
+
+    if (profileData.email) {
+      const userWithSameEmail = await this.findUserByEmail(profileData.email);
+      if (userWithSameEmail && userWithSameEmail.id !== userId) {
         throw new ConflictException('Email already in use');
-      data.email = dto.email;
+      }
+      updatePayload.email = profileData.email;
     }
-    if (dto.password) {
-      data.password = await bcrypt.hash(dto.password, 10);
+
+    if (profileData.password) {
+      updatePayload.password = await bcrypt.hash(profileData.password, 10);
     }
-    const updatedUser = await this.prisma.user.update({ where: { id }, data });
+
+    const updatedUser = await this.prismaService.user.update({
+      where: { id: userId },
+      data: updatePayload,
+    });
+
     return plainToInstance(PublicUserResponseDto, updatedUser);
   }
 }

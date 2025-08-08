@@ -4,6 +4,8 @@
 /build
 node_modules
 src/database/prisma/migrations
+src/modules/dashboard
+comprehensive-test.js
 
 # Logs
 logs
@@ -56,6 +58,3 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-
-
-src/modules/dashboard

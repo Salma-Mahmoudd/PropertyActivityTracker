@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -16,15 +17,18 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { UserRole } from '@prisma/client';
+import { UserRole, AccountStatus } from '@prisma/client';
 import type { User } from '@prisma/client';
 import {
   ApiBearerAuth,
   ApiBody,
   ApiOkResponse,
   ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
 } from '@nestjs/swagger';
-import { AccountStatus } from '@prisma/client';
 import { UserResponseDto } from './dto/user-response.dto';
 import { PublicUserResponseDto } from './dto/public-user-response.dto';
 
@@ -37,60 +41,172 @@ export class UsersController {
 
   @Roles(UserRole.ADMIN)
   @Post()
-  @ApiOkResponse({ type: UserResponseDto })
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  @ApiOperation({
+    summary: 'Create a new user',
+    description: 'Creates a new user (Admin only)',
+  })
+  @ApiCreatedResponse({
+    type: UserResponseDto,
+    description: 'User created successfully',
+  })
+  async createUser(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<UserResponseDto> {
+    return this.usersService.createUser(createUserDto);
   }
 
   @Roles(UserRole.ADMIN)
   @Get()
-  @ApiOkResponse({ type: UserResponseDto, isArray: true })
-  findAll() {
-    return this.usersService.findAll();
+  @ApiOperation({
+    summary: 'Get all users',
+    description: 'Retrieves all users (Admin only)',
+  })
+  @ApiOkResponse({
+    type: [UserResponseDto],
+    description: 'List of all users',
+  })
+  async getAllUsers(): Promise<UserResponseDto[]> {
+    return this.usersService.getAllUsers();
   }
 
   @Patch('me')
-  @ApiOkResponse({ type: PublicUserResponseDto })
-  updateProfile(@CurrentUser() user: User, @Body() dto: UpdateProfileDto) {
-    return this.usersService.updateProfile(user.id, dto);
+  @ApiOperation({
+    summary: 'Update current user profile',
+    description: 'Updates the profile of the authenticated user',
+  })
+  @ApiOkResponse({
+    type: PublicUserResponseDto,
+    description: 'Profile updated successfully',
+  })
+  async updateProfile(
+    @CurrentUser() currentUser: User,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ): Promise<PublicUserResponseDto> {
+    return this.usersService.updateUserProfile(
+      currentUser.id,
+      updateProfileDto,
+    );
   }
 
   @Get('me')
-  @ApiOkResponse({ type: PublicUserResponseDto })
-  getProfile(@CurrentUser() user: User) {
-    return this.usersService.findSafeById(user.id);
+  @ApiOperation({
+    summary: 'Get current user profile',
+    description: 'Retrieves the profile of the authenticated user',
+  })
+  @ApiOkResponse({
+    type: PublicUserResponseDto,
+    description: 'Current user profile',
+  })
+  async getProfile(
+    @CurrentUser() currentUser: User,
+  ): Promise<PublicUserResponseDto> {
+    return this.usersService.findPublicUserById(currentUser.id);
   }
 
   @Get('public/list')
-  @ApiOkResponse({ type: PublicUserResponseDto, isArray: true })
-  getPublicUsers() {
-    return this.usersService.findAllPublic();
+  @ApiOperation({
+    summary: 'Get public users list',
+    description: 'Retrieves list of public users (active, non-admin)',
+  })
+  @ApiOkResponse({
+    type: [PublicUserResponseDto],
+    description: 'List of public users',
+  })
+  async getPublicUsers(): Promise<PublicUserResponseDto[]> {
+    return this.usersService.getPublicUsers();
   }
 
   @Roles(UserRole.ADMIN)
   @Get(':id')
-  @ApiOkResponse({ type: UserResponseDto })
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+  @ApiOperation({
+    summary: 'Get user by ID',
+    description: 'Retrieves a specific user by ID (Admin only)',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'User ID',
+  })
+  @ApiOkResponse({
+    type: UserResponseDto,
+    description: 'User details',
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+  })
+  async findUserById(
+    @Param('id', ParseIntPipe) userId: number,
+  ): Promise<UserResponseDto> {
+    return this.usersService.findUserById(userId);
   }
 
   @Roles(UserRole.ADMIN)
   @Patch(':id')
-  @ApiOkResponse({ type: UserResponseDto })
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.usersService.update(+id, dto);
+  @ApiOperation({
+    summary: 'Update user',
+    description: 'Updates a specific user (Admin only)',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'User ID',
+  })
+  @ApiOkResponse({
+    type: UserResponseDto,
+    description: 'User updated successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+  })
+  async updateUser(
+    @Param('id', ParseIntPipe) userId: number,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<UserResponseDto> {
+    return this.usersService.updateUser(userId, updateUserDto);
   }
 
   @Roles(UserRole.ADMIN)
   @Delete(':id')
-  @ApiOkResponse({ type: UserResponseDto })
-  softDelete(@Param('id') id: string) {
-    return this.usersService.softDelete(+id);
+  @ApiOperation({
+    summary: 'Soft delete user',
+    description: 'Soft deletes a user (Admin only)',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'User ID',
+  })
+  @ApiOkResponse({
+    type: UserResponseDto,
+    description: 'User soft deleted successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+  })
+  async softDeleteUser(
+    @Param('id', ParseIntPipe) userId: number,
+  ): Promise<UserResponseDto> {
+    return this.usersService.softDeleteUser(userId);
   }
 
   @Roles(UserRole.ADMIN)
   @Patch(':id/status')
-  @ApiOkResponse({ type: UserResponseDto })
+  @ApiOperation({
+    summary: 'Update user account status',
+    description: 'Updates the account status of a user (Admin only)',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'User ID',
+  })
+  @ApiOkResponse({
+    type: UserResponseDto,
+    description: 'User status updated successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'User not found',
+  })
   @ApiBody({
     description: 'Set account status',
     schema: {
@@ -101,7 +217,10 @@ export class UsersController {
       required: ['status'],
     },
   })
-  setStatus(@Param('id') id: string, @Body('status') status: AccountStatus) {
-    return this.usersService.setAccountStatus(+id, status);
+  async updateAccountStatus(
+    @Param('id', ParseIntPipe) userId: number,
+    @Body('status') status: AccountStatus,
+  ): Promise<UserResponseDto> {
+    return this.usersService.updateAccountStatus(userId, status);
   }
 }
