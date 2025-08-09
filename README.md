@@ -2,6 +2,12 @@
 
 A comprehensive backend system for tracking property-related activities by sales representatives with real-time updates, activity replay, and notification systems.
 
+## 🚀 Demo
+
+**Live Demo**: [View Project Demo](https://drive.google.com/file/d/19r-02_zUBb8Bez1gnF1Q7_8dfpv3m-iY/view?usp=sharing)
+
+---
+
 ## Overview
 
 This backend system provides a robust foundation for a map-based property activity tracker where sales representatives can perform various activities related to properties (visit, call, inspection, follow-up, note) with real-time tracking, persistent history, and collaborative features.
